@@ -8,7 +8,6 @@ import (
 	"log101/konulu-konum-backend/models"
 
 	"os"
-	"strings"
 
 	"github.com/dchest/uniuri"
 	"github.com/gofiber/fiber/v2"
@@ -39,9 +38,7 @@ func main() {
 		return c.SendString("Sample")
 	})
 
-	app.Static("/images", "./public")
-
-	app.Post("/upload", func(c *fiber.Ctx) error {
+	app.Post("/api/location", func(c *fiber.Ctx) error {
 		if form, err := c.MultipartForm(); err == nil {
 			// Get string input
 			if token := form.Value["token"]; len(token) > 0 {
@@ -74,32 +71,32 @@ func main() {
 				fmt.Fprintln(os.Stderr, err)
 			}
 
-			imageName := strings.Split(file.Filename, ".")[0]
-
-			// Save image
-			bimg.Write(fmt.Sprintf("./public/%s.webp", imageName), newImage)
-
 			// Generate public uri for the image
 			chars := uniuri.StdChars[26:52]
 			randomUri := uniuri.NewLenChars(10, chars)
 			imageUri := fmt.Sprintf("%s-%s-%s", randomUri[0:3], randomUri[3:7], randomUri[7:])
 
-			fmt.Println(imageUri)
-
-			db.Create(&models.KonuluKonum{URI: "sample", Image: newImage, Loc: "sample", AuthorName: "sample", Description: "sample", UnlockedCounter: 0})
-
-			var konuluKonum models.KonuluKonum
-			db.First(&konuluKonum)
-
-			// Save image
-			bimg.Write("./public/storedImage.webp", konuluKonum.Image)
-
-			db.Delete(&konuluKonum)
+			db.Create(&models.KonuluKonum{URI: imageUri, Image: newImage, Coordinates: "sample", AuthorName: "sample", Description: "sample", UnlockedCounter: 0})
 
 			return c.SendStatus(fiber.StatusOK)
 		}
 
 		return c.SendStatus(fiber.StatusBadRequest)
+	})
+
+	app.Get("/api/location/:locationUri", func(c *fiber.Ctx) error {
+		uri := c.Params("locationUri")
+		if len(uri) == 0 {
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+
+		var konuluKonum models.KonuluKonum
+		rows := db.Where("URI = ?", uri).First(&konuluKonum)
+		if rows.Error != nil {
+			return c.SendStatus(fiber.StatusInternalServerError)
+		}
+
+		return c.SendString(konuluKonum.URI)
 	})
 
 	app.Listen(":3000")
