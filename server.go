@@ -86,12 +86,13 @@ func main() {
 
 			fmt.Println(imageUri)
 
-			db.Create(&models.KonuluKonum{URI: "sample", ImageURI: imageUri, Loc: "sample", AuthorName: "sample", Description: "sample", UnlockedCounter: 0})
+			db.Create(&models.KonuluKonum{URI: "sample", Image: newImage, Loc: "sample", AuthorName: "sample", Description: "sample", UnlockedCounter: 0})
 
 			var konuluKonum models.KonuluKonum
 			db.First(&konuluKonum)
 
-			fmt.Println(konuluKonum.ImageURI)
+			// Save image
+			bimg.Write("./public/storedImage.webp", konuluKonum.Image)
 
 			db.Delete(&konuluKonum)
 

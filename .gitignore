@@ -24,3 +24,5 @@ go.work
 TODO
 .env
 test.db
+
+public/*
