@@ -3,6 +3,10 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
+	DB "log101/konulu-konum-backend/db"
+	"log101/konulu-konum-backend/models"
+
 	"os"
 	"strings"
 
@@ -11,9 +15,20 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/h2non/bimg"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load environment variables
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("Error loading .env file")
+	}
+
+	// initialize db
+	DB.InitDB()
+	db := DB.GetDB()
+
 	app := fiber.New()
 	app.Use(logger.New())
 	app.Use(compress.New(compress.Config{
@@ -70,6 +85,15 @@ func main() {
 			imageUri := fmt.Sprintf("%s-%s-%s", randomUri[0:3], randomUri[3:7], randomUri[7:])
 
 			fmt.Println(imageUri)
+
+			db.Create(&models.KonuluKonum{URI: "sample", ImageURI: imageUri, Loc: "sample", AuthorName: "sample", Description: "sample", UnlockedCounter: 0})
+
+			var konuluKonum models.KonuluKonum
+			db.First(&konuluKonum)
+
+			fmt.Println(konuluKonum.ImageURI)
+
+			db.Delete(&konuluKonum)
 
 			return c.SendStatus(fiber.StatusOK)
 		}
