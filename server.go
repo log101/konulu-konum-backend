@@ -16,6 +16,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/h2non/bimg"
 	"github.com/joho/godotenv"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -106,6 +107,28 @@ func main() {
 			"author":           konuluKonum.AuthorName,
 			"description":      konuluKonum.Description,
 			"unlocked_counter": konuluKonum.UnlockedCounter,
+		})
+	})
+
+	app.Patch("/api/location/increment/:locationUri", func(c *fiber.Ctx) error {
+		uri := c.Params("locationUri")
+		if len(uri) == 0 {
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+
+		var konuluKonum models.KonuluKonum
+		rows := db.Where("URI = ?", uri).First(&konuluKonum)
+		if rows.Error != nil {
+			return c.SendStatus(fiber.StatusNotFound)
+		}
+
+		rows = db.Model(&konuluKonum).Where("uri = ?", uri).UpdateColumn("unlocked_counter", gorm.Expr("unlocked_counter + 1"))
+		if rows.Error != nil {
+			c.SendStatus(fiber.StatusInternalServerError)
+		}
+
+		return c.JSON(fiber.Map{
+			"counter": konuluKonum.ID,
 		})
 	})
 
