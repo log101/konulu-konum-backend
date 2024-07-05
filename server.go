@@ -6,12 +6,13 @@ import (
 	"log"
 	DB "log101/konulu-konum-backend/db"
 	"log101/konulu-konum-backend/models"
+	"strings"
 
 	"os"
 
 	"github.com/dchest/uniuri"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/compress"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/h2non/bimg"
 	"github.com/joho/godotenv"
@@ -30,9 +31,10 @@ func main() {
 
 	app := fiber.New()
 	app.Use(logger.New())
-	app.Use(compress.New(compress.Config{
-		Level: compress.LevelBestCompression,
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "http://localhost:4321",
 	}))
+	app.Static("/images", "./public")
 
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Sample")
@@ -40,18 +42,12 @@ func main() {
 
 	app.Post("/api/location", func(c *fiber.Ctx) error {
 		if form, err := c.MultipartForm(); err == nil {
-			// Get string input
-			if token := form.Value["token"]; len(token) > 0 {
-				fmt.Println(token[0])
-			}
+			// Get form values
+			author := form.Value["author"][0]
+			description := form.Value["description"][0]
+			geolocation := fmt.Sprintf("[%s]", form.Value["geolocation"][0])
 
-			// Get image
-			files := form.File["document"]
-			if len(files) != 1 {
-				fmt.Println("bad request")
-			}
-
-			file := form.File["document"][0]
+			file := form.File["selected-photo"][0]
 			fmt.Println(file.Filename, file.Size, file.Header["Content-Type"][0])
 
 			newFile, err := file.Open()
@@ -71,14 +67,21 @@ func main() {
 				fmt.Fprintln(os.Stderr, err)
 			}
 
+			imageName := strings.Split(file.Filename, ".")[0]
+			imagePath := fmt.Sprintf("./public/%s.webp", imageName)
+			imageURL := fmt.Sprintf("%s.webp", imageName)
+			bimg.Write(imagePath, newImage)
+
 			// Generate public uri for the image
 			chars := uniuri.StdChars[26:52]
 			randomUri := uniuri.NewLenChars(10, chars)
 			imageUri := fmt.Sprintf("%s-%s-%s", randomUri[0:3], randomUri[3:7], randomUri[7:])
 
-			db.Create(&models.KonuluKonum{URI: imageUri, Image: newImage, Coordinates: "sample", AuthorName: "sample", Description: "sample", UnlockedCounter: 0})
+			db.Create(&models.KonuluKonum{URI: imageUri, ImageURL: imageURL, Coordinates: geolocation, AuthorName: author, Description: description, UnlockedCounter: 0})
 
-			return c.SendStatus(fiber.StatusOK)
+			return c.JSON(fiber.Map{
+				"url": imageUri,
+			})
 		}
 
 		return c.SendStatus(fiber.StatusBadRequest)
@@ -96,7 +99,14 @@ func main() {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 
-		return c.SendString(konuluKonum.URI)
+		return c.JSON(fiber.Map{
+			"url":              konuluKonum.URI,
+			"blob_url":         konuluKonum.ImageURL,
+			"loc":              konuluKonum.Coordinates,
+			"author":           konuluKonum.AuthorName,
+			"description":      konuluKonum.Description,
+			"unlocked_counter": konuluKonum.UnlockedCounter,
+		})
 	})
 
 	app.Listen(":3000")

@@ -7,7 +7,7 @@ import (
 type KonuluKonum struct {
 	gorm.Model
 	URI             string
-	Image           []byte `gorm:"type:BLOB"`
+	ImageURL        string
 	Coordinates     string
 	AuthorName      string
 	Description     string
