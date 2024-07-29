@@ -71,8 +71,10 @@ func main() {
 			imageName := strings.Split(file.Filename, ".")[0]
 			imagePath := fmt.Sprintf("./public/%s.webp", imageName)
 			imageURL := fmt.Sprintf("%s.webp", imageName)
-			bimg.Write(imagePath, newImage)
-
+			err = bimg.Write(imagePath, newImage)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+			}
 			// Generate public uri for the image
 			chars := uniuri.StdChars[26:52]
 			randomUri := uniuri.NewLenChars(10, chars)
@@ -132,6 +134,6 @@ func main() {
 		})
 	})
 
-	app.Listen(":3000")
+	app.Listen(":3456")
 
 }
