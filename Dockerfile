@@ -24,4 +24,6 @@ RUN apk add vips
 
 COPY --from=builder /usr/src/app .
 
+RUN mkdir public
+
 CMD ["./konulukonum"]
