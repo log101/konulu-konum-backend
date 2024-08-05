@@ -16,14 +16,15 @@ import (
 )
 
 func KonuluKonumCreate(c *fiber.Ctx) error {
+	clientURL := os.Getenv("CLIENT_URL")
 	if form, err := c.MultipartForm(); err == nil {
 		// Get form values
 		author := form.Value["author"][0]
 		description := form.Value["description"][0]
-		geolocation := fmt.Sprintf("[%s]", form.Value["geolocation"][0])
 
+		// Geolocation is stored as JSON array string
+		geolocation := fmt.Sprintf("[%s]", form.Value["geolocation"][0])
 		file := form.File["selected-photo"][0]
-		fmt.Println(file.Filename, file.Size, file.Header["Content-Type"][0])
 
 		newFile, err := file.Open()
 		if err != nil {
@@ -31,17 +32,19 @@ func KonuluKonumCreate(c *fiber.Ctx) error {
 		}
 		defer newFile.Close()
 
+		// Read image file
 		data, err := io.ReadAll(newFile)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		}
 
-		// Compress image
+		// Compress image file and convert to webp
 		newImage, err := bimg.NewImage(data).Convert(bimg.WEBP)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		}
 
+		// Save image file in public folder
 		imageName := strings.Split(file.Filename, ".")[0]
 		imagePath := fmt.Sprintf("./public/%s.webp", imageName)
 		imageURL := fmt.Sprintf("%s.webp", imageName)
@@ -49,20 +52,24 @@ func KonuluKonumCreate(c *fiber.Ctx) error {
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		}
-		// Generate public uri for the image
+
+		// Generate public uri for the image this will be the
+		// id for the konulu konum
 		chars := uniuri.StdChars[26:52]
 		randomUri := uniuri.NewLenChars(10, chars)
 		imageUri := fmt.Sprintf("%s-%s-%s", randomUri[0:3], randomUri[3:7], randomUri[7:])
 
+		// Write to DB
 		db := DB.GetDB()
 		db.Create(&models.KonuluKonum{URI: imageUri, ImageURL: imageURL, Coordinates: geolocation, AuthorName: author, Description: description, UnlockedCounter: 0})
 
-		return c.JSON(fiber.Map{
-			"url": imageUri,
-		})
+		// Return URL
+		redirectURL := fmt.Sprintf("%s/x?id=%s", clientURL, imageUri)
+		return c.Redirect(redirectURL)
 	}
 
-	return c.SendStatus(fiber.StatusBadRequest)
+	redirectUrl := fmt.Sprintf("%s?error=%s", clientURL, "true")
+	return c.Redirect(redirectUrl)
 }
 
 func KonuluKonumGet(c *fiber.Ctx) error {
@@ -88,7 +95,7 @@ func KonuluKonumGet(c *fiber.Ctx) error {
 	})
 }
 
-func KonuluKonumUpdateCounter(c *fiber.Ctx) error {
+func KonuluKonumCounterUpdate(c *fiber.Ctx) error {
 	uri := c.Params("locationUri")
 	if len(uri) == 0 {
 		return c.SendStatus(fiber.StatusBadRequest)
