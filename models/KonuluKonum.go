@@ -11,6 +11,6 @@ type KonuluKonum struct {
 	Coordinates     string
 	AuthorName      string
 	Description     string
-	Diameter        int
+	Radius          int
 	UnlockedCounter int
 }
