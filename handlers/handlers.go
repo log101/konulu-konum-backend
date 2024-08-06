@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	DB "log101/konulu-konum-backend/db"
@@ -21,6 +22,11 @@ func KonuluKonumCreate(c *fiber.Ctx) error {
 		// Get form values
 		author := form.Value["author"][0]
 		description := form.Value["description"][0]
+		diameter := form.Value["geolocation-diameter"][0]
+		diameterInt, err := strconv.Atoi(diameter)
+		if err != nil {
+			diameterInt = 50
+		}
 
 		// Geolocation is stored as JSON array string
 		geolocation := fmt.Sprintf("[%s]", form.Value["geolocation"][0])
@@ -61,7 +67,7 @@ func KonuluKonumCreate(c *fiber.Ctx) error {
 
 		// Write to DB
 		db := DB.GetDB()
-		db.Create(&models.KonuluKonum{URI: imageUri, ImageURL: imageURL, Coordinates: geolocation, AuthorName: author, Description: description, UnlockedCounter: 0})
+		db.Create(&models.KonuluKonum{URI: imageUri, ImageURL: imageURL, Coordinates: geolocation, AuthorName: author, Description: description, UnlockedCounter: 0, Diameter: diameterInt})
 
 		// Return URL
 		redirectURL := fmt.Sprintf("%s/x?id=%s", clientURL, imageUri)
@@ -91,6 +97,7 @@ func KonuluKonumGet(c *fiber.Ctx) error {
 		"loc":              konuluKonum.Coordinates,
 		"author":           konuluKonum.AuthorName,
 		"description":      konuluKonum.Description,
+		"diameter":         konuluKonum.Diameter,
 		"unlocked_counter": konuluKonum.UnlockedCounter,
 	})
 }
