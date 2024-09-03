@@ -30,11 +30,18 @@ func KonuluKonumCreate(c *fiber.Ctx) error {
 
 		// Geolocation is stored as JSON array string
 		geolocation := fmt.Sprintf("[%s]", form.Value["geolocation"][0])
-		file := form.File["selected-photo"][0]
+		file := form.File["selected-photo"]
+		if len(file) != 1 {
+			fmt.Fprintln(os.Stderr, err)
+			redirectUrl := fmt.Sprintf("%s?error=%s", clientURL, "true")
+			return c.Redirect(redirectUrl)
+		}
 
-		newFile, err := file.Open()
+		newFile, err := file[0].Open()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
+			redirectUrl := fmt.Sprintf("%s?error=%s", clientURL, "true")
+			return c.Redirect(redirectUrl)
 		}
 		defer newFile.Close()
 
@@ -42,21 +49,27 @@ func KonuluKonumCreate(c *fiber.Ctx) error {
 		data, err := io.ReadAll(newFile)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
+			redirectUrl := fmt.Sprintf("%s?error=%s", clientURL, "true")
+			return c.Redirect(redirectUrl)
 		}
 
 		// Compress image file and convert to webp
 		newImage, err := bimg.NewImage(data).Convert(bimg.WEBP)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
+			redirectUrl := fmt.Sprintf("%s?error=%s", clientURL, "true")
+			return c.Redirect(redirectUrl)
 		}
 
 		// Save image file in public folder
-		imageName := strings.Split(file.Filename, ".")[0]
+		imageName := strings.Split(file[0].Filename, ".")[0]
 		imagePath := fmt.Sprintf("./public/%s.webp", imageName)
 		imageURL := fmt.Sprintf("%s.webp", imageName)
 		err = bimg.Write(imagePath, newImage)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
+			redirectUrl := fmt.Sprintf("%s?error=%s", clientURL, "true")
+			return c.Redirect(redirectUrl)
 		}
 
 		// Generate public uri for the image this will be the
