@@ -112,6 +112,7 @@ func KonuluKonumGet(c *fiber.Ctx) error {
 		"description":      konuluKonum.Description,
 		"radius":           konuluKonum.Radius,
 		"unlocked_counter": konuluKonum.UnlockedCounter,
+		"created_at":       konuluKonum.CreatedAt,
 	})
 }
 
