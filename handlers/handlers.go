@@ -5,13 +5,13 @@ import (
 	"io"
 	"os"
 	"strconv"
-	"strings"
 
 	DB "log101/konulu-konum-backend/db"
 	"log101/konulu-konum-backend/models"
 
 	"github.com/dchest/uniuri"
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/h2non/bimg"
 	"gorm.io/gorm"
 )
@@ -62,9 +62,9 @@ func KonuluKonumCreate(c *fiber.Ctx) error {
 		}
 
 		// Save image file in public folder
-		imageName := strings.Split(file[0].Filename, ".")[0]
+		imageName := uuid.New()
 		imagePath := fmt.Sprintf("./public/%s.webp", imageName)
-		imageURL := fmt.Sprintf("%s.webp", imageName)
+		imageNameWithExtension := fmt.Sprintf("%s.webp", imageName)
 		err = bimg.Write(imagePath, newImage)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -80,7 +80,7 @@ func KonuluKonumCreate(c *fiber.Ctx) error {
 
 		// Write to DB
 		db := DB.GetDB()
-		db.Create(&models.KonuluKonum{URI: imageUri, ImageURL: imageURL, Coordinates: geolocation, AuthorName: author, Description: description, UnlockedCounter: 0, Radius: radiusInt})
+		db.Create(&models.KonuluKonum{URI: imageUri, ImageURL: imageNameWithExtension, Coordinates: geolocation, AuthorName: author, Description: description, UnlockedCounter: 0, Radius: radiusInt})
 
 		// Return URL
 		redirectURL := fmt.Sprintf("%s/x?id=%s", clientURL, imageUri)
